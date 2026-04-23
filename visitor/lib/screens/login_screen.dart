@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,6 +13,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  bool _isLoading = false;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -19,15 +22,37 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
-    if (_formKey.currentState!.validate()) {
-      final email = _emailController.text.trim();
-      final userName = email.contains('@') ? email.split('@').first : email;
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final result = await ApiService.login(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (!mounted) return;
+
+    if (result.success) {
+      final user = result.user ?? {};
+      final userName =
+          user['userName'] ?? user['username'] ?? user['name'] ?? 'User';
 
       Navigator.pushReplacementNamed(
         context,
         '/home',
         arguments: userName,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message)),
       );
     }
   }
@@ -76,8 +101,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _login,
-                    child: const Text('Login'),
+                    onPressed: _isLoading ? null : _login,
+                    child: Text(_isLoading ? 'Loading...' : 'Login'),
                   ),
                 ),
                 const SizedBox(height: 12),
