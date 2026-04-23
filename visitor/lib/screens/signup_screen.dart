@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -16,6 +17,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
 
+  bool _isLoading = false;
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -26,12 +29,39 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _signup() {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _signup() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final result = await ApiService.signup(
+      name: _nameController.text.trim(),
+      userName: _userNameController.text.trim(),
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (!mounted) return;
+
+    if (result.success) {
+      final user = result.user ?? {};
+      final userName =
+          user['userName'] ?? user['username'] ?? _userNameController.text.trim();
+
       Navigator.pushReplacementNamed(
         context,
         '/home',
-        arguments: _userNameController.text.trim(),
+        arguments: userName,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message)),
       );
     }
   }
@@ -129,8 +159,8 @@ class _SignupScreenState extends State<SignupScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _signup,
-                    child: const Text('Sign Up'),
+                    onPressed: _isLoading ? null : _signup,
+                    child: Text(_isLoading ? 'Loading...' : 'Sign Up'),
                   ),
                 ),
                 const SizedBox(height: 12),
