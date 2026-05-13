@@ -1,36 +1,70 @@
-import '../../../core/network/api_client.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../models/visitor_model.dart';
 
 class VisitorService {
-  final String endpoint = "/visitors";
+  static const String baseUrl = 'https://visitor-api-58oi.onrender.com/api/visitors';
 
   Future<List<Visitor>> getVisitors() async {
-    final response = await ApiClient.dio.get(endpoint);
+    final response = await http.get(Uri.parse(baseUrl));
 
-    return (response.data as List)
-        .map((json) => Visitor.fromJson(json))
-        .toList();
+    if (response.statusCode == 200) {
+      final List data = jsonDecode(response.body);
+      return data.map((item) => Visitor.fromJson(item)).toList();
+    } else {
+      throw Exception('Failed to fetch visitors');
+    }
   }
 
-  Future<Visitor> createVisitor(Visitor visitor) async {
-    final response = await ApiClient.dio.post(
-      endpoint,
-      data: visitor.toJson(),
+  Future<Visitor> addVisitor(Visitor visitor) async {
+    final response = await http.post(
+      Uri.parse(baseUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(visitor.toJson()),
     );
 
-    return Visitor.fromJson(response.data);
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return Visitor.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to add visitor');
+    }
   }
 
   Future<Visitor> updateVisitor(String id, Visitor visitor) async {
-    final response = await ApiClient.dio.put(
-      "$endpoint/$id",
-      data: visitor.toJson(),
+    final response = await http.put(
+      Uri.parse('$baseUrl/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(visitor.toJson()),
     );
 
-    return Visitor.fromJson(response.data);
+    if (response.statusCode == 200) {
+      return Visitor.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to update visitor');
+    }
   }
 
   Future<void> deleteVisitor(String id) async {
-    await ApiClient.dio.delete("$endpoint/$id");
+    final response = await http.delete(Uri.parse('$baseUrl/$id'));
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete visitor');
+    }
+  }
+
+  Future<Visitor> punchOutVisitor(String id) async {
+    final response = await http.patch(
+      Uri.parse('$baseUrl/$id/punch-out'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'exitTime': DateTime.now().toIso8601String(),
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return Visitor.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to punch out visitor');
+    }
   }
 }

@@ -27,7 +27,7 @@ class VisitorController extends GetxController {
 
   Future<void> addVisitor(Visitor visitor) async {
     try {
-      final newVisitor = await _service.createVisitor(visitor);
+      final newVisitor = await _service.addVisitor(visitor);
       visitors.add(newVisitor);
       Get.snackbar("Success", "Visitor added");
     } catch (e) {
