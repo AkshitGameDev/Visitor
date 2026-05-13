@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/auth_response.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   static const String baseUrl = 'https://visitor-api-58oi.onrender.com';
@@ -15,9 +16,7 @@ class ApiService {
 
     final response = await http.post(
       url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'name': name,
         'userName': userName,
@@ -46,19 +45,22 @@ class ApiService {
 
     final response = await http.post(
       url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-      }),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'password': password}),
     );
 
     final data = jsonDecode(response.body);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return AuthResponse.fromJson(data);
+      final authResponse = AuthResponse.fromJson(data);
+
+      if (authResponse.token != null) {
+        final prefs = await SharedPreferences.getInstance();
+
+        await prefs.setString('token', authResponse.token!);
+      }
+
+      return authResponse;
     } else {
       return AuthResponse(
         success: false,
